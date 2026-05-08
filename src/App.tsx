@@ -177,53 +177,145 @@ export default function App() {
   }, [data, isOperating]); // Triggers on every data update (new candle start)
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-brand-bg font-sans">
+    <div className="h-screen w-screen flex flex-col overflow-x-hidden bg-brand-bg font-sans">
       {/* Header */}
-      <header className="h-16 bg-brand-header border-b border-brand-border flex items-center justify-between px-6 z-30">
+      <header className="h-14 lg:h-16 bg-brand-header border-b border-brand-border flex items-center justify-between px-4 lg:px-6 z-30 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="font-serif italic text-xl font-light text-white">Binomo</span>
-          <span className="text-[#666] text-xl">|</span>
-          <span className="text-gray-400 text-sm font-medium tracking-wide">IA Alavancagem</span>
+          <span className="font-serif italic text-lg lg:text-xl font-light text-white">Binomo</span>
+          <span className="hidden sm:inline text-[#666] text-xl">|</span>
+          <span className="hidden sm:inline text-gray-400 text-xs lg:text-sm font-medium tracking-wide">IA Alavancagem</span>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 px-3 py-1 bg-brand-neon/10 border border-brand-neon/30 rounded-full">
+        <div className="flex items-center gap-3 lg:gap-6">
+          <div className="hidden xs:flex items-center gap-2 px-2 lg:px-3 py-1 bg-brand-neon/10 border border-brand-neon/30 rounded-full">
             <div className="w-1.5 h-1.5 rounded-full bg-brand-neon animate-pulse" />
-            <span className="text-brand-neon text-[10px] font-bold tracking-widest uppercase">IA System Online</span>
+            <span className="text-brand-neon text-[8px] lg:text-[10px] font-bold tracking-widest uppercase">Global Server</span>
           </div>
           
           <div className="text-right">
-            <div className="text-[10px] text-[#999] uppercase font-medium">CONTA DEMO: silas.hp@hotmail.com</div>
-            <div className="text-brand-neon text-lg font-bold tracking-tighter">
+            <div className="text-[9px] lg:text-[10px] text-[#999] uppercase font-medium truncate max-w-[120px]">DEMO: silas.hp</div>
+            <div className="text-brand-neon text-sm lg:text-lg font-bold tracking-tighter">
               $ {account.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Grid */}
-      <main className="flex-1 grid grid-cols-[260px_1fr_280px] bg-brand-border h-[calc(100%-16px-32px)]">
-        {/* Left Panel: Settings */}
-        <section className="bg-brand-panel p-5 overflow-y-auto">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#666] mb-6">Configurações</h3>
+      {/* Main Grid - Responsive Layout */}
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[260px_1fr_280px] bg-brand-border overflow-y-auto lg:overflow-hidden">
+        
+        {/* Top Section on Mobile: Signal Summary (Floating for better visibility) */}
+        {!account.activeTrade && lastSignal && (
+          <div className="lg:hidden p-3 bg-brand-header border-b border-brand-border sticky top-0 z-20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${lastSignal.type === 'BUY' ? 'bg-brand-neon' : 'bg-brand-danger'}`} />
+              <span className="text-[10px] font-bold uppercase">{lastSignal.pattern}</span>
+            </div>
+            <span className={`text-[10px] font-mono ${lastSignal.type === 'BUY' ? 'text-brand-neon' : 'text-brand-danger'}`}>
+              {(lastSignal.confidence * 100).toFixed(0)}% CONF.
+            </span>
+          </div>
+        )}
+
+        {/* Chart Area - Main priority on mobile */}
+        <section className="order-1 lg:order-2 bg-brand-bg relative flex flex-col border-b lg:border-x border-brand-border trading-grid h-[45vh] lg:h-full">
+          <div className="px-4 py-3 border-b border-[#111] flex justify-between items-center bg-brand-bg/50 backdrop-blur-sm z-10 shrink-0">
+            <span className="text-[11px] lg:text-[13px] font-medium tracking-wide">GRÁFICO REALTIME</span>
+            <span className="text-[#666] text-[10px] lg:text-xs">VAR: <span className="text-brand-neon font-mono">+1.24%</span></span>
+          </div>
+
+          <div className="flex-1 relative candle-bg-gradient overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 10 }}>
+                <XAxis dataKey="time" hide />
+                <YAxis domain={['auto', 'auto']} hide />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const d = payload[0].payload as CandlestickData;
+                      return (
+                        <div className="bg-brand-card p-2 border border-brand-border rounded shadow-2xl font-mono text-[9px]">
+                          <div className="grid grid-cols-2 gap-x-2">
+                            <span>A:</span> <span className="text-gray-100">{d.open.toFixed(2)}</span>
+                            <span>F:</span> <span className={d.close >= d.open ? 'text-brand-neon' : 'text-brand-danger'}>{d.close.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                
+                <Bar dataKey="close">
+                  {data.map((entry, index) => {
+                    const isUp = entry.close >= entry.open;
+                    return (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={isUp ? "#10b981" : "#ef4444"} 
+                      />
+                    );
+                  })}
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+
+            {/* Point of Entry Indicator */}
+            <div className="absolute bottom-12 right-4 lg:bottom-24 lg:right-8 text-right pointer-events-none">
+              <div className="text-brand-neon text-[9px] lg:text-[11px] font-bold opacity-60 tracking-wider mb-1 uppercase">Taxa Detectada</div>
+              <div className="text-brand-neon text-xl lg:text-3xl font-bold tracking-tighter">
+                {data[data.length - 1]?.close.toFixed(5)}
+              </div>
+            </div>
+
+            {/* AI Active Overlay */}
+            <AnimatePresence>
+              {account.activeTrade && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 flex items-center justify-center bg-brand-bg/60 backdrop-blur-[4px] z-10"
+                >
+                  <div className="bg-brand-card/90 border border-white/10 p-6 lg:p-8 rounded-3xl shadow-2xl text-center space-y-4 max-w-[80%]">
+                    <div className={`w-12 h-12 lg:w-16 lg:h-16 mx-auto rounded-full flex items-center justify-center ${account.activeTrade.type === 'BUY' ? 'bg-brand-neon/20' : 'bg-brand-danger/20'}`}>
+                      {account.activeTrade.type === 'BUY' ? <ArrowUpRight className="text-brand-neon w-6 h-6 lg:w-8 lg:h-8" /> : <ArrowDownRight className="text-brand-danger w-6 h-6 lg:w-8 lg:h-8" />}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] lg:text-[11px] font-bold text-[#666] uppercase tracking-widest">Execução Automatizada</p>
+                      <p className="text-2xl lg:text-4xl font-bold font-mono tracking-tighter text-white">R$ {account.activeTrade.amount}</p>
+                    </div>
+                    <div className="text-[10px] text-brand-neon font-mono animate-pulse">
+                      OPERANDO...
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
+
+        {/* Left Panel: Settings - Collapsible or scrollable on mobile */}
+        <section className="order-3 lg:order-1 bg-brand-panel p-4 lg:p-5 border-b lg:border-b-0 lg:border-r border-brand-border">
+          <h3 className="text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-[#666] mb-4 lg:mb-6">Configurações</h3>
           
-          <div className="space-y-5">
+          <div className="grid grid-cols-2 lg:block gap-3 lg:space-y-5">
             {[
-              { label: 'Ativo', value: 'CRYPTO/USDT (OTC)' },
-              { label: 'Valor da Operação', value: 'R$ 500,00' },
-              { label: 'Tempo de Expiração', value: '1 Minuto (M1)' },
-              { label: 'Estratégia IA', value: 'Price Action Avançado' }
+              { label: 'Ativo', value: 'CRYPTO OTC' },
+              { label: 'Investimento', value: 'R$ 500,00' },
+              { label: 'Timeframe', value: 'M1' },
+              { label: 'Algoritmo', value: 'Gemini 3 Flash' }
             ].map((item, i) => (
-              <div key={i} className="space-y-1.5">
-                <label className="text-[12px] text-[#999]">{item.label}</label>
-                <div className="bg-brand-card border border-[#333] px-3 py-2.5 rounded text-white font-mono text-sm">
+              <div key={i} className="space-y-1">
+                <label className="text-[10px] text-[#555]">{item.label}</label>
+                <div className="bg-brand-card border border-[#222] px-3 py-2 rounded text-white font-mono text-xs">
                   {item.value}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-10 pt-6 border-t border-[#222]">
+          <div className="hidden lg:block mt-10 pt-6 border-t border-[#222]">
              <div className="flex items-center gap-2 mb-4">
                 <TerminalIcon className="w-3 h-3 text-[#666]" />
                 <span className="text-[10px] font-bold text-[#666] uppercase">Console Logs</span>
@@ -244,195 +336,104 @@ export default function App() {
           </div>
         </section>
 
-        {/* Center: Chart Area */}
-        <section className="bg-brand-bg relative flex flex-col border-x border-brand-border trading-grid">
-          <div className="px-5 py-4 border-b border-[#111] flex justify-between items-center bg-brand-bg/50 backdrop-blur-sm z-10">
-            <span className="text-[13px] font-medium tracking-wide">GRÁFICO EM TEMPO REAL</span>
-            <span className="text-[#666] text-xs">Variação: <span className="text-brand-neon font-mono">+1.24%</span></span>
-          </div>
-
-          <div className="flex-1 relative candle-bg-gradient">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 40, right: 20, left: 20, bottom: 20 }}>
-                <XAxis dataKey="time" hide />
-                <YAxis domain={['auto', 'auto']} hide />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const d = payload[0].payload as CandlestickData;
-                      return (
-                        <div className="bg-brand-card p-3 border border-brand-border rounded shadow-2xl font-mono text-[10px]">
-                          <p className="text-gray-500 mb-1">{d.time}</p>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            <span>OPEN:</span> <span className="text-gray-100">{d.open.toFixed(2)}</span>
-                            <span>HIGH:</span> <span className="text-gray-100">{d.high.toFixed(2)}</span>
-                            <span>LOW:</span> <span className="text-gray-100">{d.low.toFixed(2)}</span>
-                            <span>CLOSE:</span> <span className={d.close >= d.open ? 'text-brand-neon' : 'text-brand-danger'}>{d.close.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                
-                <Bar dataKey="close">
-                  {data.map((entry, index) => {
-                    const isUp = entry.close >= entry.open;
-                    return (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={isUp ? "#10b981" : "#ef4444"} 
-                        shadow={isUp ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(239, 68, 68, 0.3)"}
-                      />
-                    );
-                  })}
-                </Bar>
-
-                <Line 
-                  type="monotone" 
-                  dataKey="close" 
-                  stroke="rgba(255,255,255,0.1)" 
-                  strokeWidth={1} 
-                  dot={false}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-
-            {/* Point of Entry Indicator */}
-            <div className="absolute bottom-24 right-8 text-right">
-              <div className="text-brand-neon text-[11px] font-bold opacity-60 tracking-wider mb-1 uppercase">Ponto de Entrada Detectado</div>
-              <div className="text-brand-neon text-3xl font-bold tracking-tighter">
-                {data[data.length - 1]?.close.toFixed(5)}
-              </div>
-            </div>
-
-            {/* AI Active Overlay */}
-            <AnimatePresence>
-              {account.activeTrade && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-brand-bg/40 backdrop-blur-[2px] pointer-events-none"
-                >
-                  <div className="bg-brand-card/90 border border-white/5 p-8 rounded-3xl shadow-2xl text-center space-y-4">
-                    <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${account.activeTrade.type === 'BUY' ? 'bg-brand-neon/20' : 'bg-brand-danger/20'}`}>
-                      {account.activeTrade.type === 'BUY' ? <ArrowUpRight className="text-brand-neon w-8 h-8" /> : <ArrowDownRight className="text-brand-danger w-8 h-8" />}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-bold text-[#666] uppercase tracking-widest">IA em Execução Automatizada</p>
-                      <p className="text-4xl font-bold font-mono tracking-tighter">$ {account.activeTrade.amount}</p>
-                    </div>
-                    <div className="text-xs text-gray-400 font-mono">
-                      Expiração: 00:08s
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </section>
-
-        {/* Right Panel: Analysis & Signals */}
-        <section className="bg-brand-panel p-5 flex flex-col">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#666] mb-6">Análise de Padrão</h3>
+        {/* Right Panel: Analysis & Control */}
+        <section className="order-2 lg:order-3 bg-brand-panel p-4 lg:p-5 flex flex-col border-b lg:border-b-0 border-brand-border">
+          <h3 className="text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.1em] text-[#666] mb-4 lg:mb-6">Painel de Analista AI</h3>
           
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 space-y-4 mb-4">
             <AnimatePresence mode="wait">
               {lastSignal ? (
                 <motion.div 
                   key={lastSignal.pattern}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="signal-gradient border border-[#333] rounded-lg p-4 space-y-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="signal-gradient border border-[#333] rounded-lg p-3 lg:p-4 space-y-3"
                 >
-                  <div>
-                    <div className="text-[10px] text-[#888] font-bold uppercase mb-1">Padrão Identificado</div>
-                    <div className="text-sm font-bold text-white uppercase tracking-tight">{lastSignal.pattern}</div>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-[9px] text-[#888] font-bold uppercase">PADRÃO</div>
+                      <div className="text-xs lg:text-sm font-bold text-white tracking-tight">{lastSignal.pattern}</div>
+                    </div>
+                    <div className={`${lastSignal.type === 'BUY' ? 'text-brand-neon' : 'text-brand-danger'} font-bold font-mono text-xs uppercase`}>
+                      {lastSignal.type}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="h-1 bg-[#333] rounded-full overflow-hidden">
+                  <div className="space-y-1.5">
+                    <div className="h-1 bg-[#222] rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${lastSignal.confidence * 100}%` }}
                         className={`h-full ${lastSignal.type === 'BUY' ? 'bg-brand-neon' : lastSignal.type === 'SELL' ? 'bg-brand-danger' : 'bg-gray-500'}`}
                       />
                     </div>
-                    <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-[#666]">ASSERTIVIDADE</span>
-                      <span className={lastSignal.type === 'BUY' ? 'text-brand-neon' : lastSignal.type === 'SELL' ? 'text-brand-danger' : 'text-gray-500'}>
+                    <div className="flex justify-between text-[9px] font-bold">
+                      <span className="text-[#555]">PROBABILIDADE</span>
+                      <span className={lastSignal.type === 'BUY' ? 'text-brand-neon' : 'text-brand-danger'}>
                         {(lastSignal.confidence * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-[#666] leading-relaxed italic border-t border-white/5 pt-3">
+                  <div className="text-[10px] text-[#666] leading-relaxed italic line-clamp-2">
                     {lastSignal.reasoning}
                   </div>
                 </motion.div>
               ) : (
-                <div className="signal-gradient border border-[#333] border-dashed rounded-lg p-8 text-center space-y-3 opacity-50">
-                  <Activity className="w-8 h-8 text-[#444] mx-auto" />
-                  <p className="text-[10px] text-[#666] uppercase font-bold tracking-widest leading-normal">
-                    Aguardando Identificação de Padrões...
+                <div className="signal-gradient border border-[#333] border-dashed rounded-lg p-6 text-center space-y-2 opacity-50">
+                  <Activity className="w-6 h-6 text-[#444] mx-auto animate-pulse" />
+                  <p className="text-[9px] text-[#666] uppercase font-bold tracking-widest">
+                    AI Scanning...
                   </p>
                 </div>
               )}
             </AnimatePresence>
 
-            <div className="bg-[#10b98108] border border-[#10b98122] rounded-lg p-4 flex items-start gap-3">
-              <ShieldCheck className="text-brand-neon w-4 h-4 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h4 className="text-[10px] font-bold text-brand-neon uppercase">Proteção de Banca</h4>
-                <p className="text-[10px] text-[#555] leading-normal">Stop Loss gerenciado automaticamente pela IA baseado em volatilidade.</p>
+            <div className="bg-[#10b98105] border border-[#10b98115] rounded-lg p-3 hidden sm:flex items-start gap-3">
+              <ShieldCheck className="text-brand-neon w-4 h-4 shrink-0" />
+              <div className="space-y-0.5">
+                <h4 className="text-[9px] font-bold text-brand-neon uppercase">Security Guard Active</h4>
+                <p className="text-[9px] text-[#444] leading-tight">Gestão de capital orientada pela API Gemini.</p>
               </div>
             </div>
           </div>
 
-          <div className="mt-auto space-y-4">
-            <div className="text-center">
-               <div className="flex items-center justify-center gap-2 text-[11px] font-bold">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isOperating ? 'bg-brand-neon' : 'bg-brand-danger'} animate-pulse`} />
-                  <span className={isOperating ? 'text-brand-neon' : 'text-brand-danger'}>
-                    {isOperating ? '● SISTEMA ATIVO' : '● SISTEMA PRONTO'}
-                  </span>
-               </div>
-            </div>
-
+          <div className="mt-auto space-y-3 pb-2 lg:pb-0">
             <button 
               onClick={handleStartOperation}
               disabled={isAnalyzing}
-              className={`w-full py-4 rounded font-bold text-sm tracking-widest uppercase transition-all duration-300 ${
+              className={`w-full py-4 lg:py-5 rounded-lg font-bold text-xs lg:text-sm tracking-[0.2em] uppercase transition-all shadow-xl active:scale-[0.98] ${
                 isOperating 
-                ? 'bg-brand-danger text-black hover:bg-brand-danger/80' 
-                : 'bg-brand-neon text-black hover:bg-[#34d399]'
+                ? 'bg-brand-danger text-black' 
+                : 'bg-brand-neon text-black'
               }`}
             >
-              {isOperating ? 'PARAR OPERAÇÃO' : 'INICIAR OPERAÇÃO'}
+              {isOperating ? 'DESATIVAR SISTEMA' : 'INICIAR ALAVANCAGEM'}
             </button>
-            <p className="text-[9px] text-[#444] text-center px-4 leading-normal">
-              Ao iniciar, a IA executará a ordem automaticamente baseada na melhor taxa de entrada disponível.
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${isOperating ? 'bg-brand-neon animate-pulse' : 'bg-[#333]'}`} />
+              <p className="text-[8px] text-[#444] text-center uppercase font-bold tracking-widest">
+                API: {isAnalyzing ? 'Processando...' : isOperating ? 'Sincronizado' : 'Aguardando'}
+              </p>
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Status Bar */}
-      <footer className="h-8 bg-black border-t border-brand-border flex items-center px-6 gap-6 text-[10px] text-[#555] font-mono z-30">
+      {/* Footer - Only visible on Tablet/Desktop or very bottom */}
+      <footer className="h-8 bg-black border-t border-brand-border hidden xs:flex items-center px-4 lg:px-6 gap-4 lg:gap-6 text-[9px] lg:text-[10px] text-[#444] font-mono z-30 shrink-0">
         <div className="flex gap-4">
-          <span className="flex items-center gap-1"><div className="w-1 h-1 bg-brand-neon rounded-full" /> SERVER: LONDON #4</span>
+          <span className="hidden sm:flex items-center gap-1"><div className="w-1 h-1 bg-brand-neon rounded-full" /> SVR: LDN#4</span>
           <span>PING: 14ms</span>
-          <span>API STATUS: 200 OK</span>
         </div>
         <div className="ml-auto flex items-center gap-4">
-          <span className="text-brand-neon/60">AUTOTRADER: {isOperating ? 'ON' : 'OFF'}</span>
-          <span className="text-white/20">|</span>
-          <span>SILAS.HP LOGIN SESSION: ACTIVE</span>
+          <span className="text-brand-neon/60">AUTOTRADER: {isOperating ? 'READY' : 'STANDBY'}</span>
+          <span className="hidden sm:inline text-white/10">|</span>
+          <span className="truncate max-w-[100px]">SESSION: {new Date().toLocaleTimeString()}</span>
         </div>
       </footer>
     </div>
+
   );
 }
 
